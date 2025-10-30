@@ -5,25 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Карта точек</title>
 
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin:0; font-family: Arial, sans-serif; }
-    #map { height: 100vh; width: 100%; }
+    #map { height: 100vh; width:100%; }
     #formContainer {
       position: absolute;
       top: 50px; left: 50%;
       transform: translateX(-50%);
       background: white;
-      padding: 12px 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-      z-index: 1000;
-      display: none;
-      width: 300px;
+      padding:12px 16px;
+      border-radius:8px;
+      box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      z-index:1000;
+      display:none;
+      width:300px;
     }
     #formContainer input, #formContainer textarea {
-      width: 100%; margin-bottom:6px; padding:6px; box-sizing:border-box;
+      width:100%; margin-bottom:6px; padding:6px; box-sizing:border-box;
     }
     #formContainer button { padding:6px 12px; cursor:pointer; margin-right:6px; }
   </style>
@@ -50,12 +49,15 @@
 
   <script>
     window.onload = function() {
-      // --- Настройка Supabase ---
+      // Настройки
       const SUPABASE_URL = 'https://nbelniuzbztnvgdwpeoq.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZWxuaXV6Ynp0bnZnZHdwZW9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3OTk2NzMsImV4cCI6MjA3NzM3NTY3M30.1sOidYAJOcu7oEfuL4RAoYAk6lVNLpfY-zbAIRqyndU';
-      const client = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      // --- Создаем карту ---
+      // Правильный способ: взять createClient из глобального supabase
+      const { createClient } = supabase;
+      const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      // Создать карту
       const map = L.map('map').setView([52.37, 4.9], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -84,37 +86,32 @@
         const email = document.getElementById('email').value.trim();
         const lat = parseFloat(document.getElementById('lat').value);
         const lng = parseFloat(document.getElementById('lng').value);
-
         if (!name) { alert('Название обязательно!'); return; }
 
-        try {
-          const { data, error } = await client
-            .from('points')
-            .insert([{ name, description, email, lat, lng, approved:false }]);
-
-          if (error) alert('Ошибка: ' + error.message);
-          else {
-            alert('Точка добавлена! Она появится на карте после одобрения.');
-            formContainer.style.display = 'none';
-            pointForm.reset();
-          }
-        } catch (err) { console.error(err); alert('Ошибка подключения к Supabase'); }
+        const { data, error } = await client
+          .from('points')
+          .insert([{ name, description, email, lat, lng, approved:false }]);
+        if (error) {
+          alert('Ошибка: ' + error.message);
+        } else {
+          alert('Точка добавлена! После одобрения будет видна.');
+          formContainer.style.display = 'none';
+          pointForm.reset();
+        }
       });
 
       async function loadApprovedPoints() {
-        try {
-          const { data, error } = await client
-            .from('points')
-            .select('*')
-            .eq('approved', true);
-          if (!error) {
-            data.forEach(pt => {
-              L.marker([pt.lat, pt.lng])
-                .addTo(map)
-                .bindPopup(`<b>${pt.name}</b><br>${pt.description || ''}`);
-            });
-          }
-        } catch(err) { console.error(err); }
+        const { data, error } = await client
+          .from('points')
+          .select('*')
+          .eq('approved', true);
+        if (!error) {
+          data.forEach(pt => {
+            L.marker([pt.lat, pt.lng])
+              .addTo(map)
+              .bindPopup(`<b>${pt.name}</b><br>${pt.description || ''}`);
+          });
+        }
       }
 
       loadApprovedPoints();
