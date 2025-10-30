@@ -1,136 +1,59 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Карта — добавь точку</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Моя карта точек</title>
+  <!-- Подключаем Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  ></script>
   <style>
-    body, html { height:100%; margin:0; font-family: Arial, sans-serif }
-    #map { height: 80vh; }
-    .controls { padding:10px; }
-    .form-popup { padding:10px; background:#fff; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.2); width:260px }
-    label { display:block; margin-top:6px; font-size:13px; }
-    input[type="text"], textarea, input[type="email"] { width:100%; padding:6px; box-sizing:border-box; }
-    button { margin-top:8px; padding:8px 12px; }
-    .hp { position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden; }
-    #status { margin-top:8px; color:#222; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 100vh; /* карта на весь экран */
+      width: 100%;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
-<div id="map"></div>
+  <div id="info">Кликни по карте, чтобы добавить точку 🗺️</div>
+  <div id="map"></div>
 
-<div class="controls">
-  <strong>Как добавить точку:</strong>
-  <ol>
-    <li>Кликни на карту</li>
-    <li>Заполни название (обязательно) + описание (необязательно) + email (необязательно)</li>
-  </ol>
-  <div id="status"></div>
-</div>
+  <script>
+    // Создаём карту и ставим начальную точку
+    const map = L.map('map').setView([52.37, 4.9], 12); // Амстердам
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    // Подключаем слой карты (от OpenStreetMap)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
 
-<script>
-  // ==== ЗАМЕНИТЕ ЭТИ ДВЕ СТРОКИ НА СВОИ ЗНАЧЕНИЯ ====
-  const SUPABASE_URL = 'https://nbelniuzbztnvgdwpeoq.supabase.co'; // <- вставь Project URL
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZWxuaXV6Ynp0bnZnZHdwZW9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3OTk2NzMsImV4cCI6MjA3NzM3NTY3M30.1sOidYAJOcu7oEfuL4RAoYAk6lVNLpfY-zbAIRqyndU'; // <- вставь anon public key
-  // ================================================
-
-  const supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  const map = L.map('map').setView([52.370216, 4.895168], 12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-
-  // Загрузим одобренные точки
-  async function loadApprovedPoints() {
-    const { data, error } = await supabase
-      .from('points')
-      .select('*')
-      .eq('approved', true);
-    if (error) { console.error(error); setStatus('Ошибка загрузки точек'); return; }
-    data.forEach(p => {
-      L.marker([parseFloat(p.lat), parseFloat(p.lng)])
-        .addTo(map)
-        .bindPopup(`<strong>${escapeHtml(p.title)}</strong><br>${escapeHtml(p.description || '')}`);
+    // Реакция на клик: добавляем маркер
+    map.on('click', function(e) {
+      const { lat, lng } = e.latlng;
+      L.marker([lat, lng]).addTo(map)
+        .bindPopup(`Новая точка:<br>${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+        .openPopup();
     });
-  }
-  loadApprovedPoints();
-
-  let popup;
-  map.on('click', (e) => {
-    if (popup) map.closePopup(popup);
-    const lat = e.latlng.lat.toFixed(6);
-    const lng = e.latlng.lng.toFixed(6);
-    const formHtml = `
-      <div class="form-popup">
-        <h4>Добавить точку</h4>
-        <label>Название <input id="pt-title" type="text" required></label>
-        <label>Описание <textarea id="pt-desc" rows="3"></textarea></label>
-        <label>Email (необязательно) <input id="pt-email" type="email" placeholder="name@example.com"></label>
-        <div class="hp"><label>Оставьте это поле пустым<input id="hp-field" type="text"></label></div>
-        <div style="margin-top:6px">Координаты: <small>${lat}, ${lng}</small></div>
-        <button id="pt-submit">Отправить на модерацию</button>
-      </div>
-    `;
-    popup = L.popup()
-      .setLatLng(e.latlng)
-      .setContent(formHtml)
-      .openOn(map);
-
-    document.getElementById('pt-submit').addEventListener('click', async () => {
-      const title = document.getElementById('pt-title').value.trim();
-      const desc = document.getElementById('pt-desc').value.trim();
-      const email = document.getElementById('pt-email').value.trim();
-      const hp = document.getElementById('hp-field').value.trim();
-
-      if (!title) { setStatus('Введите название'); return; }
-      if (hp) { setStatus('Ошибка: заполнено служебное поле'); return; }
-      if (email && !validateEmail(email)) { setStatus('Неверный формат email'); return; }
-
-      const btn = document.getElementById('pt-submit');
-      btn.disabled = true;
-      btn.textContent = 'Отправка...';
-      setStatus('');
-
-      const { error } = await supabase
-        .from('points')
-        .insert([{
-          title,
-          description: desc,
-          lat: lat,
-          lng: lng,
-          user_email: email ? email : null,
-          approved: false
-        }]);
-
-      if (error) {
-        console.error(error);
-        setStatus('Ошибка при отправке: ' + error.message);
-        btn.disabled = false;
-        btn.textContent = 'Отправить на модерацию';
-      } else {
-        setStatus('Спасибо! Точка отправлена на модерацию.');
-        map.closePopup(popup);
-      }
-    });
-  });
-
-  function setStatus(text) { document.getElementById('status').textContent = text; }
-
-  function escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe.replace(/[&<"']/g, function(m) {
-      return {'&':'&amp;','<':'&lt;','"':'&quot;',"'":'&#039;'}[m];
-    });
-  }
-
-  function validateEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-</script>
+  </script>
 </body>
 </html>
