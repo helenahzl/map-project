@@ -10,25 +10,12 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
-  <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  ></script>
-
-  <!-- Supabase JS -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
+    body { margin:0; font-family: Arial, sans-serif; }
     #map { height: 100vh; width: 100%; }
-
     #formContainer {
       position: absolute;
-      top: 50px;
-      left: 50%;
+      top: 50px; left: 50%;
       transform: translateX(-50%);
       background: white;
       padding: 12px 16px;
@@ -39,21 +26,13 @@
       width: 300px;
     }
     #formContainer input, #formContainer textarea {
-      width: 100%;
-      margin-bottom: 6px;
-      padding: 6px;
-      box-sizing: border-box;
+      width: 100%; margin-bottom:6px; padding:6px; box-sizing:border-box;
     }
-    #formContainer button {
-      padding: 6px 12px;
-      cursor: pointer;
-      margin-right: 6px;
-    }
+    #formContainer button { padding:6px 12px; cursor:pointer; margin-right:6px; }
   </style>
 </head>
 <body>
   <div id="map"></div>
-
   <div id="formContainer">
     <h3>Добавить точку</h3>
     <form id="pointForm">
@@ -67,15 +46,20 @@
     </form>
   </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
-    window.addEventListener('DOMContentLoaded', (event) => {
+    window.onload = function() {
       // --- Настройки Supabase ---
       const SUPABASE_URL = 'https://nbelniuzbztnvgdwpeoq.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZWxuaXV6Ynp0bnZnZHdwZW9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3OTk2NzMsImV4cCI6MjA3NzM3NTY3M30.1sOidYAJOcu7oEfuL4RAoYAk6lVNLpfY-zbAIRqyndU';
       const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       // --- Создаем карту ---
-      const map = L.map('map').setView([52.37, 4.9], 12); // центр Амстердам
+      const map = L.map('map').setView([52.37, 4.9], 12);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
@@ -85,60 +69,47 @@
       const pointForm = document.getElementById('pointForm');
       const cancelBtn = document.getElementById('cancelBtn');
 
-      // --- Открытие формы при клике на карту ---
       map.on('click', function(e) {
         document.getElementById('lat').value = e.latlng.lat;
         document.getElementById('lng').value = e.latlng.lng;
         formContainer.style.display = 'block';
       });
 
-      // --- Закрытие формы ---
       cancelBtn.addEventListener('click', () => {
         formContainer.style.display = 'none';
         pointForm.reset();
       });
 
-      // --- Отправка формы в Supabase ---
       pointForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-
         const name = document.getElementById('name').value.trim();
         const description = document.getElementById('description').value.trim();
         const email = document.getElementById('email').value.trim();
         const lat = parseFloat(document.getElementById('lat').value);
         const lng = parseFloat(document.getElementById('lng').value);
 
-        if (!name) {
-          alert('Название обязательно!');
-          return;
-        }
+        if (!name) { alert('Название обязательно!'); return; }
 
         try {
           const { data, error } = await supabase
             .from('points')
-            .insert([{ name, description, email, lat, lng, approved: false }]);
+            .insert([{ name, description, email, lat, lng, approved:false }]);
 
-          if (error) {
-            alert('Ошибка при добавлении точки: ' + error.message);
-          } else {
+          if (error) alert('Ошибка: ' + error.message);
+          else {
             alert('Точка добавлена! Она появится на карте после одобрения.');
             formContainer.style.display = 'none';
             pointForm.reset();
           }
-        } catch (err) {
-          console.error(err);
-          alert('Ошибка подключения к Supabase.');
-        }
+        } catch (err) { console.error(err); alert('Ошибка подключения к Supabase'); }
       });
 
-      // --- Загрузка одобренных точек ---
       async function loadApprovedPoints() {
         try {
           const { data, error } = await supabase
             .from('points')
             .select('*')
             .eq('approved', true);
-
           if (!error) {
             data.forEach(pt => {
               L.marker([pt.lat, pt.lng])
@@ -146,13 +117,11 @@
                 .bindPopup(`<b>${pt.name}</b><br>${pt.description || ''}`);
             });
           }
-        } catch (err) {
-          console.error('Ошибка загрузки точек:', err);
-        }
+        } catch(err) { console.error(err); }
       }
 
       loadApprovedPoints();
-    });
+    }
   </script>
 </body>
 </html>
