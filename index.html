@@ -6,10 +6,7 @@
   <title>Карта точек</title>
 
   <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     body { margin:0; font-family: Arial, sans-serif; }
     #map { height: 100vh; width: 100%; }
@@ -53,10 +50,10 @@
 
   <script>
     window.onload = function() {
-      // --- Настройки Supabase ---
+      // --- Настройка Supabase ---
       const SUPABASE_URL = 'https://nbelniuzbztnvgdwpeoq.supabase.co';
       const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5iZWxuaXV6Ynp0bnZnZHdwZW9xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE3OTk2NzMsImV4cCI6MjA3NzM3NTY3M30.1sOidYAJOcu7oEfuL4RAoYAk6lVNLpfY-zbAIRqyndU';
-      const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      const client = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
       // --- Создаем карту ---
       const map = L.map('map').setView([52.37, 4.9], 12);
@@ -91,7 +88,7 @@
         if (!name) { alert('Название обязательно!'); return; }
 
         try {
-          const { data, error } = await supabase
+          const { data, error } = await client
             .from('points')
             .insert([{ name, description, email, lat, lng, approved:false }]);
 
@@ -106,7 +103,7 @@
 
       async function loadApprovedPoints() {
         try {
-          const { data, error } = await supabase
+          const { data, error } = await client
             .from('points')
             .select('*')
             .eq('approved', true);
